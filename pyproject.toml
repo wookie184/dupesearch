@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "dupesearch"
+version = "0.1.5"
+description = ""
+authors = ["wookie184 <wookie1840@gmail.com>"]
+
+[tool.maturin]
+sdist-include = [
+    "src/*",
+    "Cargo.toml",
+    "dupesearch/*.py",
+    "dupesearch/*.pyi"
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+rich = "^10.4.0"
+maturin = "^0.10.6"
+click = "^8.0.1"
+
+[tool.poetry.dev-dependencies]
+
+
+[build-system]
+requires = ["maturin>=0.10,<0.11"]
+build-backend = "maturin"
+
