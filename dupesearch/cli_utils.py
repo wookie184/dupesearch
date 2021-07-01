@@ -14,24 +14,16 @@ from . import dupesearch
 console = Console()
 
 VIDEO_FORMATS = [
-    ext.lstrip(".")
-    for ext, mime in mimetypes.types_map.items()
-    if mime.startswith("video")
+    ext.lstrip(".") for ext, mime in mimetypes.types_map.items() if mime.startswith("video")
 ]
 IMAGE_FORMATS = [
-    ext.lstrip(".")
-    for ext, mime in mimetypes.types_map.items()
-    if mime.startswith("image")
+    ext.lstrip(".") for ext, mime in mimetypes.types_map.items() if mime.startswith("image")
 ]
 AUDIO_FORMATS = [
-    ext.lstrip(".")
-    for ext, mime in mimetypes.types_map.items()
-    if mime.startswith("audio")
+    ext.lstrip(".") for ext, mime in mimetypes.types_map.items() if mime.startswith("audio")
 ]
 TEXT_FORMATS = [
-    ext.lstrip(".")
-    for ext, mime in mimetypes.types_map.items()
-    if mime.startswith("text")
+    ext.lstrip(".") for ext, mime in mimetypes.types_map.items() if mime.startswith("text")
 ]
 
 
@@ -53,7 +45,6 @@ def ask_for_path():
         default=Path.cwd(),
     )
     path = str(Path(option).absolute())
-    console.print(f"Searching for duplicate photos at path: {path}")
     return path
 
 
@@ -63,6 +54,7 @@ def get_duplicates(search_path, file_formats, quiet=False):
     thread = threading.Thread(target=dupefinder.find_duplicates)
     thread.start()
     if not quiet:
+        console.print(f"Searching for duplicate photos at path: {search_path}")
         display_progress_bar(dupefinder)
     thread.join()
 
@@ -87,9 +79,7 @@ def display_progress_bar(dupefinder):
         progress.update(finding_files, completed=value, total=value)
         progress.stop_task(finding_files)
 
-        processing_files = progress.add_task(
-            "Processing Files...", total=dupefinder.file_count
-        )
+        processing_files = progress.add_task("Processing Files...", total=dupefinder.file_count)
         while not dupefinder.has_processed_files:
             progress.update(processing_files, completed=dupefinder.processed_count)
             progress.refresh()
@@ -114,23 +104,27 @@ def save_to_file(dupes, file_path, quiet=False):
         console.print(f"Output saved to file: {file_path}")
 
 
+def ask_for_file_formats():
+    choices = Prompt.ask(
+        "Would you like to filter by file extension? If not, press enter, otherwise enter "
+        "a list of comma separated extensions. You can enter photo, video, text, or audio "
+        "to select common extensions in those groups respectively"
+    )
+    return choices
+
+
 def ask_for_file_name():
     while True:
         location = Prompt.ask("Enter the path and/or file name to save the file to")
         path = Path(location).absolute()
         if path.is_file():
-            path = (
-                path
-                if path.suffix.endswith("json")
-                else path.with_suffix(path.suffix + ".json")
-            )
+            path = path if path.suffix.endswith("json") else path.with_suffix(path.suffix + ".json")
         else:
             path = path / "duplicates.json"
 
         if path.exists():
             console.print(
-                f"The file `{path}` already exists. "
-                "Please delete this file, or enter a new path"
+                f"The file `{path}` already exists. Please delete this file, or enter a new path"
             )
             continue
 
@@ -162,9 +156,7 @@ def delete_files(dupefinder, quiet=False):
     thread.start()
     if not quiet:
         with get_progress_bar() as progress:
-            deleting = progress.add_task(
-                "Deleting Duplicates...", total=len(dupefinder.duplicates)
-            )
+            deleting = progress.add_task("Deleting Duplicates...", total=len(dupefinder.duplicates))
             while thread.is_alive():
                 progress.update(deleting, completed=dupefinder.deleted_count)
                 time.sleep(0.1)

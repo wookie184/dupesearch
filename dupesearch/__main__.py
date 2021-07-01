@@ -66,11 +66,10 @@ def dupesearch_cli(
     """Find and remove duplicate files quickly."""
     if interactive:
         search_path = cli_utils.ask_for_path()
+        file_formats = cli_utils.ask_for_file_formats()
 
     formats = cli_utils.parse_file_formats(file_formats)
-    dupefinder = cli_utils.get_duplicates(
-        search_path, formats, not interactive and quiet
-    )
+    dupefinder = cli_utils.get_duplicates(search_path, formats, not interactive and quiet)
 
     if len(dupefinder.duplicates) == 0:
         return
