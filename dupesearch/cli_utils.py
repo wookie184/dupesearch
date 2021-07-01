@@ -89,7 +89,7 @@ def save_to_file(dupes, file_path, quiet=False):
         json.dump(dupes, f)
 
     if not quiet:
-        console.print(f"Output saved to path: {file_path}")
+        console.print(f"Output saved to file: {file_path}")
 
 
 def process_results(dupefinder):
@@ -99,7 +99,8 @@ def process_results(dupefinder):
         default="delete",
     )
     if option == "save":
-        save_to_file("JSON", dupefinder.duplicates)
+        location = Prompt.ask("Where would you like to save the file to? ")
+        save_to_file(dupefinder.duplicates, location)
     elif option == "delete":
         delete_files(dupefinder)
 
