@@ -30,7 +30,7 @@ import click
     "--file-path",
     "-p",
     "file_path",
-    type=click.File("w", "utf8"),
+    type=click.Path(exists=False, dir_okay=False, writable=True, resolve_path=True),
     default=Path.cwd() / "duplicates.json",
     show_default=True,
     help="Choose file to save output to, see GitHub readme for details.",
@@ -78,6 +78,7 @@ def dupesearch_cli(
     if interactive:
         cli_utils.process_results(dupefinder)
     else:
+        print(save_to_file)
         if save_to_file:
             cli_utils.save_to_file(dupefinder.duplicates, file_path, quiet)
 
