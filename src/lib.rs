@@ -30,12 +30,14 @@ struct DuplicateFinder {
     finished_finding_files: Arc<AtomicBool>,
     finished_processing_files: Arc<AtomicBool>,
     finished: Arc<AtomicBool>,
+
+    file_formats: Option<Vec<String>>
 }
 
 #[pymethods]
 impl DuplicateFinder {
     #[new]
-    fn new(search_path: String) -> Self {
+    fn new(search_path: String, file_formats: Option<Vec<String>>) -> Self {
         let files_found_counter = Arc::new(Mutex::new(0));
         let files_processed_counter = Arc::new(Mutex::new(0));
         let deleted_files_counter = Arc::new(Mutex::new(0));
@@ -47,6 +49,7 @@ impl DuplicateFinder {
         let finished_finding_files = Arc::new(AtomicBool::new(false));
         let finished = Arc::new(AtomicBool::new(false));
 
+
         DuplicateFinder {
             files_found_counter,
             files_processed_counter,
@@ -57,6 +60,7 @@ impl DuplicateFinder {
             finished_finding_files,
             finished,
             search_path,
+            file_formats,
         }
     }
     #[getter]
@@ -126,7 +130,7 @@ impl DuplicateFinder {
             .follow_links(true)
             .into_iter()
             .filter_map(|e| e.ok())
-            .filter(|e| !e.path().is_dir() & is_media_file(e.path()))
+            .filter(|e| !e.path().is_dir() & self.is_media_file(e.path()))
         {
             self.files_found
                 .lock()
@@ -175,6 +179,20 @@ impl DuplicateFinder {
         self.finished.store(true, Ordering::Relaxed);
         Ok(())
     }
+
+    fn is_media_file(&self, f_name: &Path) -> bool {
+        match &self.file_formats{
+            Some(file_formats) => file_formats.contains(
+                &f_name
+                    .extension()
+                    .unwrap_or_default()
+                    .to_str()
+                    .unwrap()
+                    .to_lowercase()
+            ),
+            None => true
+        }
+    }
 }
 
 fn read_sample_of_file(f_name: &Path) -> Result<Vec<u8>, Error> {
@@ -182,16 +200,4 @@ fn read_sample_of_file(f_name: &Path) -> Result<Vec<u8>, Error> {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
     Ok(buffer)
-}
-
-fn is_media_file(f_name: &Path) -> bool {
-    ["jpg", "png"].contains(
-        &f_name
-            .extension()
-            .unwrap_or_default()
-            .to_str()
-            .unwrap()
-            .to_lowercase()
-            .as_str(),
-    ) || true // Temporary while custom file choice is implemented
 }
