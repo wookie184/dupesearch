@@ -86,10 +86,36 @@ def display_progress_bar(dupefinder):
 
 def save_to_file(dupes, file_path, quiet=False):
     with open(file_path, "w") as f:
-        json.dump(dupes, f)
+        json.dump(dupes, f, indent=4)
 
     if not quiet:
         console.print(f"Output saved to file: {file_path}")
+
+
+def ask_for_file_name():
+    while True:
+        location = Prompt.ask("Enter the path and/or file name to save the file to")
+        path = Path(location).absolute()
+        if path.is_file():
+            path = path if path.suffix.endswith('json') else path.with_suffix(path.suffix + '.json')
+        else:
+            path = path / 'duplicates.json'
+        
+        if path.exists():
+            console.print(
+                f"The file `{path}` already exists. "
+                "Please delete this file, or enter a new path"
+            )
+            continue
+
+        if not path.parent.exists():
+            console.print(
+                f"The directory {path.parent} for that file does not exist. "
+                "Please enter a new path"
+            )
+            continue
+
+        return path
 
 
 def process_results(dupefinder):
@@ -99,8 +125,8 @@ def process_results(dupefinder):
         default="delete",
     )
     if option == "save":
-        location = Prompt.ask("Where would you like to save the file to? ")
-        save_to_file(dupefinder.duplicates, location)
+        path = ask_for_file_name()
+        save_to_file(dupefinder.duplicates, path)
     elif option == "delete":
         delete_files(dupefinder)
 
