@@ -1,6 +1,7 @@
 import threading
 import time
 from pathlib import Path
+import mimetypes
 
 from rich.progress import BarColumn, Progress, TimeRemainingColumn
 from rich.prompt import Prompt
@@ -11,6 +12,27 @@ from . import dupesearch
 
 
 console = Console()
+
+VIDEO_FORMATS = [
+    ext.lstrip(".")
+    for ext, mime in mimetypes.types_map.items()
+    if mime.startswith("video")
+]
+IMAGE_FORMATS = [
+    ext.lstrip(".")
+    for ext, mime in mimetypes.types_map.items()
+    if mime.startswith("image")
+]
+AUDIO_FORMATS = [
+    ext.lstrip(".")
+    for ext, mime in mimetypes.types_map.items()
+    if mime.startswith("audio")
+]
+TEXT_FORMATS = [
+    ext.lstrip(".")
+    for ext, mime in mimetypes.types_map.items()
+    if mime.startswith("text")
+]
 
 
 def get_progress_bar():
@@ -35,8 +57,8 @@ def ask_for_path():
     return path
 
 
-def get_duplicates(search_path, quiet=False):
-    dupefinder = dupesearch.DuplicateFinder(search_path)
+def get_duplicates(search_path, file_formats, quiet=False):
+    dupefinder = dupesearch.DuplicateFinder(search_path, file_formats)
 
     thread = threading.Thread(target=dupefinder.find_duplicates)
     thread.start()
@@ -97,10 +119,14 @@ def ask_for_file_name():
         location = Prompt.ask("Enter the path and/or file name to save the file to")
         path = Path(location).absolute()
         if path.is_file():
-            path = path if path.suffix.endswith('json') else path.with_suffix(path.suffix + '.json')
+            path = (
+                path
+                if path.suffix.endswith("json")
+                else path.with_suffix(path.suffix + ".json")
+            )
         else:
-            path = path / 'duplicates.json'
-        
+            path = path / "duplicates.json"
+
         if path.exists():
             console.print(
                 f"The file `{path}` already exists. "
@@ -148,3 +174,27 @@ def delete_files(dupefinder, quiet=False):
 
     if not quiet:
         console.print("Duplicates have been deleted!")
+
+
+def parse_file_formats(raw_formats):
+    formats = raw_formats.split(",")
+    cleaned = []
+    for format in formats:
+        format = format.strip().lower()
+        if format in ("photo", "photos", "image", "images"):
+            cleaned.extend(IMAGE_FORMATS)
+        elif format in ("video", "videos"):
+            cleaned.extend(VIDEO_FORMATS)
+        elif format in ("text",):
+            cleaned.extend(TEXT_FORMATS)
+        elif format in ("audio", "sound"):
+            cleaned.extend(AUDIO_FORMATS)
+        elif format == "all":
+            cleaned = None
+            break
+        elif format.startswith("."):
+            cleaned.append(format.lstrip("."))
+        else:
+            raise ValueError(f"{format} is not a valid option")
+    print(cleaned)
+    return cleaned

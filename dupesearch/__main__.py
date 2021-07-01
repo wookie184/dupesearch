@@ -42,7 +42,7 @@ import click
     flag_value=True,
     help="Delete duplicates. Will keep the file with the shortest path.",
 )
-@click.option(  # TODO: implement this
+@click.option(
     "--file-formats",
     "-f",
     "file_formats",
@@ -55,13 +55,22 @@ import click
 @click.option("--quiet", "-q", flag_value=False, help="Suppress all command output")
 @click.help_option("--help", "-h")
 def dupesearch_cli(
-    interactive, save_to_file, file_path, search_path, quiet, delete_duplicates, file_formats
+    interactive,
+    save_to_file,
+    file_path,
+    search_path,
+    quiet,
+    delete_duplicates,
+    file_formats,
 ):
     """Find and remove duplicate files quickly."""
     if interactive:
         search_path = cli_utils.ask_for_path()
 
-    dupefinder = cli_utils.get_duplicates(search_path, not interactive or quiet)
+    formats = cli_utils.parse_file_formats(file_formats)
+    dupefinder = cli_utils.get_duplicates(
+        search_path, formats, not interactive and quiet
+    )
 
     if len(dupefinder.duplicates) == 0:
         return
