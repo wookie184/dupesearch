@@ -52,16 +52,3 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
-
-
-jobs:
-  CodeQL-Build:
-
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-      actions: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
