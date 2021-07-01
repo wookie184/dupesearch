@@ -78,7 +78,6 @@ def dupesearch_cli(
     if interactive:
         cli_utils.process_results(dupefinder)
     else:
-        print(save_to_file)
         if save_to_file:
             cli_utils.save_to_file(dupefinder.duplicates, file_path, quiet)
 

@@ -196,5 +196,4 @@ def parse_file_formats(raw_formats):
             cleaned.append(format.lstrip("."))
         else:
             raise ValueError(f"{format} is not a valid option")
-    print(cleaned)
     return cleaned
