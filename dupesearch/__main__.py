@@ -16,7 +16,7 @@ import click
     "-p",
     "search_path",
     default=Path.cwd(),
-    type=click.Path(exists=True, file_okay=False, readable=False, resolve_path=True),
+    type=click.Path(exists=True, file_okay=False, writable=True, resolve_path=True),
     help="Choose search path. Defaults to current directory.",
 )
 @click.option(
@@ -27,9 +27,9 @@ import click
     help="Save list of duplicate groups found to a file.",
 )
 @click.option(
-    "--file-path",
-    "-p",
-    "file_path",
+    "--save-path",
+    "-sp",
+    "save_path",
     type=click.Path(exists=False, dir_okay=False, writable=True, resolve_path=True),
     default=Path.cwd() / "duplicates.json",
     show_default=True,
@@ -52,12 +52,12 @@ import click
         "`photo` and `video` can be supplied to include common extensions respectively."
     ),
 )
-@click.option("--quiet", "-q", flag_value=False, help="Suppress all command output")
+@click.option("--quiet", "-q", flag_value=True, help="Suppress all command output")
 @click.help_option("--help", "-h")
 def dupesearch_cli(
     interactive,
     save_to_file,
-    file_path,
+    save_path,
     search_path,
     quiet,
     delete_duplicates,
@@ -78,7 +78,7 @@ def dupesearch_cli(
         cli_utils.process_results(dupefinder)
     else:
         if save_to_file:
-            cli_utils.save_to_file(dupefinder.duplicates, file_path, quiet)
+            cli_utils.save_to_file(dupefinder.duplicates, save_path, quiet)
 
         if delete_duplicates:
             cli_utils.delete_files(dupefinder, quiet)

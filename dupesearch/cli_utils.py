@@ -117,7 +117,8 @@ def ask_for_file_name():
     while True:
         location = Prompt.ask("Enter the path and/or file name to save the file to")
         path = Path(location).absolute()
-        if path.is_file():
+        print(path)
+        if not path.is_dir():
             path = path if path.suffix.endswith("json") else path.with_suffix(path.suffix + ".json")
         else:
             path = path / "duplicates.json"
@@ -169,6 +170,9 @@ def delete_files(dupefinder, quiet=False):
 
 
 def parse_file_formats(raw_formats):
+    if not raw_formats or raw_formats.strip() == "":
+        return None
+
     formats = raw_formats.split(",")
     cleaned = []
     for format in formats:
