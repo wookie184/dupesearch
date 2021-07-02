@@ -1,7 +1,7 @@
 [package]
 name = "dupesearch"
 description = "Duplicate file remover"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2018"
 authors = ["wookie184"]
 
