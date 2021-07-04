@@ -39,7 +39,7 @@ jobs:
     # setup-python does not support matrix https://github.com/actions/setup-python/issues/98
     # so just run it for each python version needed.
     - name: Set up Python 3.7
-      uses: wookie184/setup-python @v2
+      uses: wookie184/setup-python@main
       with:
         python-version: ${{ matrix.python-versions }}
         architecture: ${{ matrix.architectures }}
