@@ -1,7 +1,7 @@
 [package]
 name = "dupesearch"
 description = "Remove duplicate files quickly with a simple command line tool"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2018"
 authors = ["wookie184 <wookie1840@gmail.com>"]
 repository = "https://github.com/wookie184/dupesearch"

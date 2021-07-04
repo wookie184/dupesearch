@@ -3,7 +3,7 @@ dependencies = ["click^=8.0.1", "rich^=10.4.0"]
 
 [tool.poetry]
 name = "dupesearch"
-version = "0.1.10"
+version = "0.1.11"
 description = ""
 authors = ["wookie184 <wookie1840@gmail.com>"]
 
