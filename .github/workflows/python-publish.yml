@@ -21,7 +21,17 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        architecture: ["x64", "x86"]
+      include:
+        - os: ubuntu-latest
+          python-versions: "3.7 3.8 3.9"
+          architectures: "x64"
+        - os: windows-latest
+          python-versions: "3.7 3.8 3.9"
+          architectures: "x64 x86"
+        - os: macos-latest
+          python-versions: "3.7 3.8 3.9"
+          architectures: "x64"
+
 
     steps:
     - uses: actions/checkout@v2
@@ -29,22 +39,10 @@ jobs:
     # setup-python does not support matrix https://github.com/actions/setup-python/issues/98
     # so just run it for each python version needed.
     - name: Set up Python 3.7
-      uses: actions/setup-python@v2
+      uses: wookie184/setup-python @v2
       with:
-        python-version: "3.7"
-        architecture: ${{ matrix.architecture }}
-
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: "3.8"
-        architecture: ${{ matrix.architecture }}
-
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
-      with:
-        python-version: "3.9"
-        architecture: ${{ matrix.architecture }}
+        python-version: ${{ matrix.python-versions }}
+        architecture: ${{ matrix.architectures }}
 
     - name: Install rust
       uses: actions-rs/toolchain@v1
