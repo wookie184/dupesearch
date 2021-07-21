@@ -1,11 +1,29 @@
 [project]
-dependencies = ["click^=8.0.1", "rich^=10.4.0"]
-
-[tool.poetry]
 name = "dupesearch"
-version = "0.1.11"
-description = ""
-authors = ["wookie184 <wookie1840@gmail.com>"]
+version = "0.1.12"
+description = "Remove duplicate files quickly with a simple command line tool"
+readme = "README.md"
+dependencies = ["click==8.*", "rich==10.*"]
+authors = [
+  {name = "wookie184", email="wookie1840@gmail.com"},
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python",
+    "Programming Language :: Rust",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+repository = "https://github.com/wookie184/dupesearch"
 
 [tool.maturin]
 sdist-include = [
@@ -15,20 +33,9 @@ sdist-include = [
     "dupesearch/*.pyi"
 ]
 
-[tool.poetry.dependencies]
-python = "^3.7"
-rich = "^10.4.0"
-click = "^8.0.1"
-
-[tool.poetry.dev-dependencies]
-pre-commit = "^2.13.0"
-black = "^21.6b0"
-maturin = "^0.10.6"
-
 [tool.black]
 line-length = 100
 
 [build-system]
-requires = ["maturin>=0.10,<0.11"]
+requires = ["maturin>=0.11,<0.12"]
 build-backend = "maturin"
-

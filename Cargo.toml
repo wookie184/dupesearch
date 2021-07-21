@@ -1,11 +1,8 @@
 [package]
 name = "dupesearch"
-description = "Remove duplicate files quickly with a simple command line tool"
 version = "0.1.11"
-edition = "2018"
 authors = ["wookie184 <wookie1840@gmail.com>"]
-repository = "https://github.com/wookie184/dupesearch"
-readme = "README.md"
+edition = "2018"
 
 [lib]
 name = "dupesearch"
@@ -19,21 +16,3 @@ threadpool="1.8.1"
 [dependencies.pyo3]
 version = "0.13.2"
 features = ["extension-module"]
-
-[package.metadata.maturin]
-requires-dist = ["click==8.0.1", "rich==10.4.0"]
-
-classifier = [
-    "Development Status :: 2 - Pre-Alpha",
-    "Intended Audience :: End Users/Desktop",
-    "Operating System :: MacOS",
-    "Operating System :: Microsoft :: Windows",
-    "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python",
-    "Programming Language :: Rust",
-    "Topic :: Utilities",
-]
