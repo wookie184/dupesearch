@@ -13,18 +13,21 @@ from . import dupesearch
 
 console = Console()
 
-VIDEO_FORMATS = [
-    ext.lstrip(".") for ext, mime in mimetypes.types_map.items() if mime.startswith("video")
-]
-IMAGE_FORMATS = [
-    ext.lstrip(".") for ext, mime in mimetypes.types_map.items() if mime.startswith("image")
-]
-AUDIO_FORMATS = [
-    ext.lstrip(".") for ext, mime in mimetypes.types_map.items() if mime.startswith("audio")
-]
-TEXT_FORMATS = [
-    ext.lstrip(".") for ext, mime in mimetypes.types_map.items() if mime.startswith("text")
-]
+REFRESH_DURATION = 0.2
+
+
+def get_formats_by_mimetype(target_mime):
+    return [
+        ext.lstrip(".")
+        for ext, mime in mimetypes.types_map.items()
+        if mime.lower().startswith(target_mime.lower())
+    ]
+
+
+VIDEO_FORMATS = get_formats_by_mimetype("video")
+IMAGE_FORMATS = get_formats_by_mimetype("image")
+AUDIO_FORMATS = get_formats_by_mimetype("audio")
+TEXT_FORMATS = get_formats_by_mimetype("text")
 
 
 def get_progress_bar():
@@ -33,7 +36,7 @@ def get_progress_bar():
         BarColumn(),
         "[progress.percentage]{task.percentage:>3.0f}%",
         TimeRemainingColumn(),
-        "{task.completed} of {task.total} processed",
+        "{task.completed} of {task.total}",
         auto_refresh=False,
     )
     return progress_bar
@@ -74,7 +77,7 @@ def display_progress_bar(dupefinder):
             value = dupefinder.file_count
             progress.update(finding_files, completed=value, total=value)
             progress.refresh()
-            time.sleep(0.1)
+            time.sleep(REFRESH_DURATION)
         value = dupefinder.file_count
         progress.update(finding_files, completed=value, total=value)
         progress.stop_task(finding_files)
@@ -83,21 +86,13 @@ def display_progress_bar(dupefinder):
         while not dupefinder.has_processed_files:
             progress.update(processing_files, completed=dupefinder.processed_count)
             progress.refresh()
-            time.sleep(0.1)
+            time.sleep(REFRESH_DURATION)
         progress.update(processing_files, completed=dupefinder.processed_count)
         progress.stop_task(processing_files)
 
-        finding_dupes = progress.add_task("Getting Duplicates...", start=True)
-        while not dupefinder.has_finished:
-            progress.refresh()
-            time.sleep(0.1)
-        dupes_found = len(dupefinder.duplicates)
-        progress.update(finding_dupes, total=dupes_found, completed=dupes_found)
-        progress.stop_task(finding_dupes)
-
 
 def save_to_file(dupes, file_path, quiet=False):
-    with open(file_path, "w") as f:
+    with open(file_path, "w", encoding="utf-8") as f:
         json.dump(dupes, f, indent=4)
 
     if not quiet:
@@ -116,8 +111,7 @@ def ask_for_file_formats():
 def ask_for_file_name():
     while True:
         location = Prompt.ask("Enter the path and/or file name to save the file to")
-        path = Path(location).absolute()
-        print(path)
+        path = Path(location).resolve()
         if not path.is_dir():
             path = path if path.suffix.endswith("json") else path.with_suffix(path.suffix + ".json")
         else:
@@ -132,7 +126,7 @@ def ask_for_file_name():
         if not path.parent.exists():
             console.print(
                 f"The directory {path.parent} for that file does not exist. "
-                "Please enter a new path"
+                "Please create the directory, or enter a new path"
             )
             continue
 
@@ -160,7 +154,7 @@ def delete_files(dupefinder, quiet=False):
             deleting = progress.add_task("Deleting Duplicates...", total=len(dupefinder.duplicates))
             while thread.is_alive():
                 progress.update(deleting, completed=dupefinder.deleted_count)
-                time.sleep(0.1)
+                time.sleep(REFRESH_DURATION)
             progress.update(deleting, completed=dupefinder.deleted_count)
 
     thread.join()

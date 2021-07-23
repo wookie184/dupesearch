@@ -1,4 +1,4 @@
-from . import cli_utils
+from . import cli
 from pathlib import Path
 import click
 
@@ -65,23 +65,23 @@ def dupesearch_cli(
 ):
     """Find and remove duplicate files quickly."""
     if interactive:
-        search_path = cli_utils.ask_for_path()
-        file_formats = cli_utils.ask_for_file_formats()
+        search_path = cli.ask_for_path()
+        file_formats = cli.ask_for_file_formats()
 
-    formats = cli_utils.parse_file_formats(file_formats)
-    dupefinder = cli_utils.get_duplicates(search_path, formats, not interactive and quiet)
+    formats = cli.parse_file_formats(file_formats)
+    dupefinder = cli.get_duplicates(search_path, formats, not interactive and quiet)
 
     if len(dupefinder.duplicates) == 0:
         return
 
     if interactive:
-        cli_utils.process_results(dupefinder)
+        cli.process_results(dupefinder)
     else:
         if save_to_file:
-            cli_utils.save_to_file(dupefinder.duplicates, save_path, quiet)
+            cli.save_to_file(dupefinder.duplicates, save_path, quiet)
 
         if delete_duplicates:
-            cli_utils.delete_files(dupefinder, quiet)
+            cli.delete_files(dupefinder, quiet)
 
 
 if __name__ == "__main__":
