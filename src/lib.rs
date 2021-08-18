@@ -127,7 +127,6 @@ impl DuplicateFinder {
     fn find_files_to_search(&self) {
         let counter = Arc::clone(&self.files_found_counter);
         for entry in WalkDir::new(&self.search_path)
-            .follow_links(true)
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| !e.path().is_dir() & self.is_media_file(e.path()))
