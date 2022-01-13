@@ -1,5 +1,6 @@
 use md5;
 use pyo3::prelude::*;
+use pyo3::exceptions::PyRuntimeError;
 use std::collections::HashMap;
 use std::fs;
 use std::io::prelude::*;
@@ -65,22 +66,34 @@ impl DuplicateFinder {
     }
     #[getter]
     fn get_processed_count(&self) -> PyResult<i32> {
-        Ok(*self.files_processed_counter.lock().unwrap())
+        return match self.files_processed_counter.lock(){
+            Ok(n) => Ok(*n),
+            Err(_) => Err(PyRuntimeError::new_err("unexpected error")),
+        };
     }
 
     #[getter]
     fn get_duplicates(&self) -> PyResult<Vec<Vec<String>>> {
-        Ok(self.duplicates_found.lock().expect("").to_vec())
+        return match self.duplicates_found.lock(){
+            Ok(n) => Ok(n.to_vec()),
+            Err(_) => Err(PyRuntimeError::new_err("unexpected error")),
+        };
     }
 
     #[getter]
     fn get_file_count(&self) -> PyResult<i32> {
-        Ok(*self.files_found_counter.lock().unwrap())
+        return match self.files_found_counter.lock(){
+            Ok(n) => Ok(*n),
+            Err(_) => Err(PyRuntimeError::new_err("unexpected error")),
+        };
     }
 
     #[getter]
     fn get_deleted_count(&self) -> PyResult<i32> {
-        Ok(*self.deleted_files_counter.lock().unwrap())
+        return match self.deleted_files_counter.lock() {
+            Ok(n) => Ok(*n),
+            Err(_) => Err(PyRuntimeError::new_err("unexpected error")),
+        };
     }
 
     #[getter]
@@ -113,8 +126,8 @@ impl DuplicateFinder {
     fn _delete_duplicates(&self) -> Result<(), Error> {
         let counter = Arc::clone(&self.deleted_files_counter);
         for group in self.duplicates_found.lock().unwrap().iter() {
-            let to_keep = group.iter().min_by_key(|x| x.len()).unwrap(); // Keep shortest path name
-            for item in group.iter() {
+            let to_keep = group.into_iter().min_by_key(|x| x.len()).unwrap(); // Keep shortest path name
+            for item in group.into_iter() {
                 if item != to_keep {
                     fs::remove_file(item)?;
                 }
@@ -127,7 +140,6 @@ impl DuplicateFinder {
     fn find_files_to_search(&self) {
         let counter = Arc::clone(&self.files_found_counter);
         for entry in WalkDir::new(&self.search_path)
-            .follow_links(true)
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| !e.path().is_dir() & self.is_media_file(e.path()))
