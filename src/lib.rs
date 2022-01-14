@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::prelude::*;
 use std::io::Error;
-use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use threadpool::ThreadPool;
 use walkdir::WalkDir;
@@ -20,80 +20,68 @@ fn dupesearch(_py: Python, m: &PyModule) -> PyResult<()> {
 #[pyclass]
 struct DuplicateFinder {
     search_path: String,
+    file_formats: Option<Vec<String>>,
 
-    files_found_counter: Arc<Mutex<i32>>,
-    files_processed_counter: Arc<Mutex<i32>>,
-    deleted_files_counter: Arc<Mutex<i32>>,
-
-    files_found: Arc<Mutex<Vec<String>>>,
-    duplicates_found: Arc<Mutex<Vec<Vec<String>>>>,
+    files_found_counter: Arc<AtomicI32>,
+    files_processed_counter: Arc<AtomicI32>,
+    deleted_files_counter: Arc<AtomicI32>,
 
     finished_finding_files: Arc<AtomicBool>,
     finished_processing_files: Arc<AtomicBool>,
     finished: Arc<AtomicBool>,
 
-    file_formats: Option<Vec<String>>
+    files_found: Arc<Mutex<Vec<PathBuf>>>,
+    duplicates_found: Arc<Mutex<Vec<Vec<PathBuf>>>>,
 }
 
 #[pymethods]
 impl DuplicateFinder {
     #[new]
     fn new(search_path: String, file_formats: Option<Vec<String>>) -> Self {
-        let files_found_counter = Arc::new(Mutex::new(0));
-        let files_processed_counter = Arc::new(Mutex::new(0));
-        let deleted_files_counter = Arc::new(Mutex::new(0));
-
-        let files_found = Arc::new(Mutex::new(Vec::new()));
-        let duplicates_found = Arc::new(Mutex::new(Vec::new()));
-
-        let finished_processing_files = Arc::new(AtomicBool::new(false));
-        let finished_finding_files = Arc::new(AtomicBool::new(false));
-        let finished = Arc::new(AtomicBool::new(false));
-
-
         DuplicateFinder {
-            files_found_counter,
-            files_processed_counter,
-            deleted_files_counter,
-            files_found,
-            duplicates_found,
-            finished_processing_files,
-            finished_finding_files,
-            finished,
             search_path,
             file_formats,
+
+            files_found_counter: Arc::new(AtomicI32::new(0)),
+            files_processed_counter: Arc::new(AtomicI32::new(0)),
+            deleted_files_counter: Arc::new(AtomicI32::new(0)),
+
+            finished_processing_files: Arc::new(AtomicBool::new(false)),
+            finished_finding_files: Arc::new(AtomicBool::new(false)),
+            finished: Arc::new(AtomicBool::new(false)),
+
+            files_found: Arc::new(Mutex::new(Vec::new())),
+            duplicates_found: Arc::new(Mutex::new(Vec::new())),
         }
     }
+
     #[getter]
     fn get_processed_count(&self) -> PyResult<i32> {
-        return match self.files_processed_counter.lock(){
-            Ok(n) => Ok(*n),
-            Err(_) => Err(PyRuntimeError::new_err("unexpected error")),
-        };
+        return Ok(self.files_processed_counter.load(Ordering::Relaxed))
     }
 
     #[getter]
     fn get_duplicates(&self) -> PyResult<Vec<Vec<String>>> {
         return match self.duplicates_found.lock(){
-            Ok(n) => Ok(n.to_vec()),
+            Ok(n) => Ok(
+                n.clone().into_iter()
+                .map(|x|
+                    x.clone().into_iter()
+                    .map(|path| path.to_string_lossy().into_owned()).collect()
+                ).collect()
+            ),
             Err(_) => Err(PyRuntimeError::new_err("unexpected error")),
         };
     }
 
     #[getter]
     fn get_file_count(&self) -> PyResult<i32> {
-        return match self.files_found_counter.lock(){
-            Ok(n) => Ok(*n),
-            Err(_) => Err(PyRuntimeError::new_err("unexpected error")),
-        };
+        Ok(self.files_found_counter.load(Ordering::Relaxed))
     }
 
     #[getter]
     fn get_deleted_count(&self) -> PyResult<i32> {
-        return match self.deleted_files_counter.lock() {
-            Ok(n) => Ok(*n),
-            Err(_) => Err(PyRuntimeError::new_err("unexpected error")),
-        };
+        Ok(self.deleted_files_counter.load(Ordering::Relaxed))
     }
 
     #[getter]
@@ -125,35 +113,42 @@ impl DuplicateFinder {
 impl DuplicateFinder {
     fn _delete_duplicates(&self) -> Result<(), Error> {
         let counter = Arc::clone(&self.deleted_files_counter);
-        for group in self.duplicates_found.lock().unwrap().iter() {
-            let to_keep = group.into_iter().min_by_key(|x| x.len()).unwrap(); // Keep shortest path name
-            for item in group.into_iter() {
-                if item != to_keep {
-                    fs::remove_file(item)?;
+        let duplicates = self.duplicates_found.lock().unwrap();
+        for group in duplicates.iter() {
+             // Keep file with shortest path
+            let to_keep = group
+                .iter()
+                .min_by_key(|x| x.to_string_lossy().len())
+                .expect("Unexpected error: empty array of duplicates");
+
+            for path in group.iter() {
+                if path != to_keep {
+                    if fs::remove_file(path).is_err() {
+                        eprintln!("Failed to remove file {}", path.to_string_lossy())
+                    };
                 }
             }
-            *counter.lock().unwrap() += 1;
+            counter.fetch_add(1, Ordering::Relaxed);
         }
         Ok(())
     }
 
     fn find_files_to_search(&self) {
         let counter = Arc::clone(&self.files_found_counter);
+        let mut files = self.files_found.lock().unwrap();
         for entry in WalkDir::new(&self.search_path)
             .into_iter()
             .filter_map(|e| e.ok())
-            .filter(|e| !e.path().is_dir() & self.is_media_file(e.path()))
+            .map(|e| e.path().to_path_buf())
+            .filter(|e| !e.is_dir() & self.is_media_file(e))
         {
-            self.files_found
-                .lock()
-                .unwrap()
-                .push(entry.path().to_str().unwrap().to_string());
-            *counter.lock().unwrap() += 1;
+            files.push(entry);
+            counter.fetch_add(1, Ordering::Relaxed);
         }
         self.finished_finding_files.store(true, Ordering::Relaxed);
     }
 
-    fn calculate_hashes(&self) -> HashMap<md5::Digest, Vec<String>> {
+    fn calculate_hashes(&self) -> HashMap<md5::Digest, Vec<PathBuf>> {
         let pool = ThreadPool::new(8);
         let (tx, rx) = mpsc::channel();
         for file in self.files_found.lock().unwrap().iter() {
@@ -161,9 +156,9 @@ impl DuplicateFinder {
             let counter = Arc::clone(&self.files_processed_counter);
             let file = file.clone();
             pool.execute(move || {
-                let buffer = read_sample_of_file(Path::new(&file)).unwrap();
+                let buffer = read_sample_of_file(&file).unwrap();
                 tx.send((file, md5::compute(buffer))).unwrap();
-                *counter.lock().unwrap() += 1;
+                counter.fetch_add(1, Ordering::Relaxed);
             });
         }
         drop(tx);
@@ -183,9 +178,10 @@ impl DuplicateFinder {
 
         let files_by_hash = self.calculate_hashes();
 
-        for (_hash, files) in files_by_hash.iter() {
+        let mut vec = self.duplicates_found.lock().unwrap();
+        for (_hash, files) in files_by_hash.into_iter() {
             if files.len() > 1 {
-                self.duplicates_found.lock().unwrap().push(files.clone());
+                vec.push(files);
             }
         }
         self.finished.store(true, Ordering::Relaxed);
@@ -193,17 +189,13 @@ impl DuplicateFinder {
     }
 
     fn is_media_file(&self, f_name: &Path) -> bool {
-        match &self.file_formats{
-            Some(file_formats) => file_formats.contains(
-                &f_name
-                    .extension()
-                    .unwrap_or_default()
-                    .to_str()
-                    .unwrap()
-                    .to_lowercase()
-            ),
-            None => true
-        }
+        if let Some(file_formats) = &self.file_formats {
+            if let Some(extension) = f_name.extension() {
+                if let Some(file_str) = extension.to_str() {
+                    file_formats.contains(&file_str.to_lowercase())
+                } else {false}
+            } else {false}
+        } else {true}
     }
 }
 
