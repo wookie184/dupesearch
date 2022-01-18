@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 walkdir="2"
-md5="0.7"
+crc="2.1"
 threadpool="1.8.1"
 
 [dependencies.pyo3]

@@ -1,4 +1,4 @@
-use md5;
+use crc;
 use pyo3::prelude::*;
 use pyo3::exceptions::PyRuntimeError;
 use std::collections::HashMap;
@@ -148,7 +148,7 @@ impl DuplicateFinder {
         self.finished_finding_files.store(true, Ordering::Relaxed);
     }
 
-    fn calculate_hashes(&self) -> HashMap<md5::Digest, Vec<PathBuf>> {
+    fn calculate_hashes(&self) -> HashMap<u64, Vec<PathBuf>> {
         let pool = ThreadPool::new(8);
         let (tx, rx) = mpsc::channel();
         for file in self.files_found.lock().unwrap().iter() {
@@ -156,8 +156,9 @@ impl DuplicateFinder {
             let counter = Arc::clone(&self.files_processed_counter);
             let file = file.clone();
             pool.execute(move || {
-                let buffer = read_sample_of_file(&file).unwrap();
-                tx.send((file, md5::compute(buffer))).unwrap();
+                if let Some(hash) = get_hash_of_file(&file){
+                    tx.send((file, hash)).unwrap();
+                }
                 counter.fetch_add(1, Ordering::Relaxed);
             });
         }
@@ -199,9 +200,22 @@ impl DuplicateFinder {
     }
 }
 
-fn read_sample_of_file(f_name: &Path) -> Result<Vec<u8>, Error> {
-    let mut file = fs::File::open(f_name)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-    Ok(buffer)
+const CRC: crc::Crc<u64> = crc::Crc::<u64>::new(&crc::CRC_64_ECMA_182);
+fn get_hash_of_file(f_name: &Path) -> Option<u64> {
+    if let Ok(mut file) = fs::File::open(f_name) {
+        let mut buffer = [0; 1048576]; // 1 MIB
+        let mut digest = CRC.digest();
+        loop {
+            if let Ok(n) = file.read(&mut buffer) {
+                if n == 0 {
+                    break
+                }
+                digest.update(&buffer[0..n]);
+            } else {
+                return None
+            }
+        }
+        return Some(digest.finalize())
+    }
+    return None
 }
