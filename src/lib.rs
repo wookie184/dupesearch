@@ -61,15 +61,9 @@ impl DuplicateFinder {
     }
 
     #[getter]
-    fn get_duplicates(&self) -> PyResult<Vec<Vec<String>>> {
-        return match self.duplicates_found.lock(){
-            Ok(n) => Ok(
-                n.clone().into_iter()
-                .map(|x|
-                    x.clone().into_iter()
-                    .map(|path| path.to_string_lossy().into_owned()).collect()
-                ).collect()
-            ),
+    fn get_duplicates(&self) -> PyResult<Vec<Vec<PathBuf>>> {
+        return match self.duplicates_found.lock() {
+            Ok(duplicates) => Ok(duplicates.clone()),
             Err(_) => Err(PyRuntimeError::new_err("unexpected error")),
         };
     }
@@ -112,7 +106,7 @@ impl DuplicateFinder {
 
 impl DuplicateFinder {
     fn _delete_duplicates(&self) -> Result<(), Error> {
-        let counter = Arc::clone(&self.deleted_files_counter);
+        let deleted_files = Arc::clone(&self.deleted_files_counter);
         let duplicates = self.duplicates_found.lock().unwrap();
         for group in duplicates.iter() {
              // Keep file with shortest path
@@ -128,22 +122,25 @@ impl DuplicateFinder {
                     };
                 }
             }
-            counter.fetch_add(1, Ordering::Relaxed);
+            deleted_files.fetch_add(1, Ordering::Relaxed);
         }
         Ok(())
     }
 
     fn find_files_to_search(&self) {
-        let counter = Arc::clone(&self.files_found_counter);
+        let file_count = Arc::clone(&self.files_found_counter);
         let mut files = self.files_found.lock().unwrap();
-        for entry in WalkDir::new(&self.search_path)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .map(|e| e.path().to_path_buf())
-            .filter(|e| !e.is_dir() & self.is_media_file(e))
-        {
-            files.push(entry);
-            counter.fetch_add(1, Ordering::Relaxed);
+        for entry in WalkDir::new(&self.search_path) {
+            if let Ok(valid_entry) = entry {
+                let path = valid_entry.path().to_path_buf();
+                if !path.is_dir() && self.is_media_file(&path){
+                    files.push(path);
+                    file_count.fetch_add(1, Ordering::Relaxed);
+                }
+            } else {
+                let error = entry.err().unwrap();
+                eprintln!("Failed to access directory/file: {error:?}")
+            }
         }
         self.finished_finding_files.store(true, Ordering::Relaxed);
     }
@@ -153,13 +150,15 @@ impl DuplicateFinder {
         let (tx, rx) = mpsc::channel();
         for file in self.files_found.lock().unwrap().iter() {
             let tx = tx.clone();
-            let counter = Arc::clone(&self.files_processed_counter);
+            let files_processed_count = Arc::clone(&self.files_processed_counter);
             let file = file.clone();
             pool.execute(move || {
                 if let Some(hash) = get_hash_of_file(&file){
                     tx.send((file, hash)).unwrap();
+                } else {
+                    eprintln!("Failed to open file: {file:?}");
                 }
-                counter.fetch_add(1, Ordering::Relaxed);
+                files_processed_count.fetch_add(1, Ordering::Relaxed);
             });
         }
         drop(tx);
@@ -169,8 +168,7 @@ impl DuplicateFinder {
             let (path, hash) = t;
             seen.entry(hash).or_insert(Vec::new()).push(path);
         }
-        self.finished_processing_files
-            .store(true, Ordering::Relaxed);
+        self.finished_processing_files.store(true, Ordering::Relaxed);
         return seen;
     }
 
@@ -179,10 +177,10 @@ impl DuplicateFinder {
 
         let files_by_hash = self.calculate_hashes();
 
-        let mut vec = self.duplicates_found.lock().unwrap();
+        let mut duplicates_found = self.duplicates_found.lock().unwrap();
         for (_hash, files) in files_by_hash.into_iter() {
             if files.len() > 1 {
-                vec.push(files);
+                duplicates_found.push(files);
             }
         }
         self.finished.store(true, Ordering::Relaxed);

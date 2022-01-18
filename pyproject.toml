@@ -1,6 +1,6 @@
 [project]
 name = "dupesearch"
-version = "0.1.12"
+version = "0.1.13"
 description = "Remove duplicate files quickly with a simple command line tool"
 readme = "README.md"
 dependencies = ["click==8.*", "rich==10.*"]

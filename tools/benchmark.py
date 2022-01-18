@@ -17,9 +17,9 @@ KB = 2 ** 10  # 1 KB in bytes
 MB = 2 ** 20  # 1 MB in bytes
 
 TESTSETS = [
-    TestSet(num_unique=100, num_total=100, file_size=KB),
-    TestSet(num_unique=1, num_total=100, file_size=KB),
-    TestSet(num_unique=1, num_total=100, file_size=MB),
+    TestSet(num_unique=500, num_total=2000, file_size=KB // 10),
+    TestSet(num_unique=1, num_total=2000, file_size=KB),
+    TestSet(num_unique=1, num_total=5, file_size=100 * MB),
 ]
 
 
@@ -42,11 +42,19 @@ def prepare_testset(tempdir, testset):
             file_path.write_bytes(file_content)
 
 
-def time_duplicate_finding(tempdir):
+def time_duplicate_finding(tempdir, testset):
     start = time.perf_counter()
     dupefinder = dupesearch.DuplicateFinder(str(tempdir), None)
     dupefinder.find_duplicates()
     end = time.perf_counter()
+    if dupefinder.file_count != testset.num_total:
+        raise RuntimeError(
+            f"Found {dupefinder.file_count} files when there should be {testset.num_total}"
+        )
+    if len(dupefinder.duplicates) != testset.num_unique:
+        raise RuntimeError(
+            f"Found {len(dupefinder.duplicates)} duplicate sets when there should be {testset.unique}"
+        )
     return end - start
 
 
@@ -55,7 +63,7 @@ def run_testsets():
         with tempfile.TemporaryDirectory(suffix="dupesearch-test") as tempdir:
             tempdir = Path(tempdir)
             prepare_testset(tempdir, testset)
-            time_taken = time_duplicate_finding(tempdir)
+            time_taken = time_duplicate_finding(tempdir, testset)
             print(f"{testset} ran in {time_taken:.3g} seconds")
 
 
