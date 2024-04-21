@@ -1,6 +1,6 @@
 [package]
 name = "dupesearch"
-version = "0.1.13"
+version = "0.20.0-alpha.1"
 authors = ["wookie184 <wookie1840@gmail.com>"]
 edition = "2021"
 
@@ -9,10 +9,10 @@ name = "dupesearch"
 crate-type = ["cdylib"]
 
 [dependencies]
-walkdir="2.3"
-crc="2.1"
-threadpool="1.8"
+walkdir="2.5"
+crc="3.2"
+rayon = "1.10.0"
 
 [dependencies.pyo3]
-version = "0.15"
+version = "0.21"
 features = ["extension-module"]

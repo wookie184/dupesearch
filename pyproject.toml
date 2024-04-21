@@ -1,9 +1,9 @@
 [project]
 name = "dupesearch"
-version = "0.1.13"
+version = "0.2.0a1"
 description = "Remove duplicate files quickly with a simple command line tool"
 readme = "README.md"
-dependencies = ["click==8.*", "rich==10.*"]
+dependencies = ["click==8.*", "rich==13.*"]
 authors = [
   {name = "wookie184", email="wookie1840@gmail.com"},
 ]
@@ -14,9 +14,10 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python",
     "Programming Language :: Rust",
     "Topic :: Utilities",
@@ -37,5 +38,5 @@ sdist-include = [
 line-length = 100
 
 [build-system]
-requires = ["maturin>=0.11,<0.12"]
+requires = ["maturin>=0.11"]
 build-backend = "maturin"
